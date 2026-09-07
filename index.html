@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>解决方案顾问 Agent — 智慧建筑方案自动生成</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --ink:#1a1d21; --ink2:#5a626b; --ink3:#8a929b;
+  --line:#e3e6ea; --brand:#185FA5; --brand-soft:#e6f1fb; --ok:#0F6E56; --ok-soft:#e1f5ee;
+  --warn:#854F0B; --warn-soft:#faeeda; --bad:#A32D2D; --bad-soft:#fcebeb;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6}
+a{color:var(--brand)}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:18px 24px}
+header h1{margin:0;font-size:19px;font-weight:600}
+header p{margin:4px 0 0;color:var(--ink2);font-size:13px}
+.tools{float:right;display:flex;gap:8px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);padding:6px 12px;border-radius:7px;font-size:13px}
+button:hover{border-color:var(--brand);color:var(--brand)}
+button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+button.primary:hover{opacity:.9;color:#fff}
+.layout{display:grid;grid-template-columns:320px 1fr;gap:20px;padding:20px 24px 60px;align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:15px;font-weight:600}
+.card h3{margin:16px 0 8px;font-size:14px;font-weight:600}
+label{display:block;font-size:12px;color:var(--ink2);margin:12px 0 4px}
+select,input[type=text],input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);
+  border-radius:7px;font:inherit;background:var(--card);color:var(--ink)}
+input[type=range]{width:100%}
+.rowval{float:right;font-family:var(--mono);font-size:12px;color:var(--brand)}
+details.adv{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+details.adv summary{cursor:pointer;font-size:12px;color:var(--ink2)}
+/* 推理链 */
+.step{border-left:3px solid var(--line);padding-left:16px;margin-bottom:22px;position:relative}
+.step.active{border-left-color:var(--brand)}
+.step-no{position:absolute;left:-13px;top:0;width:22px;height:22px;border-radius:50%;
+  background:var(--brand);color:#fff;font-size:11px;display:flex;align-items:center;
+  justify-content:center;font-family:var(--mono)}
+.step h2{margin:0 0 8px;font-size:15px}
+.evid{background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:9px 12px;
+  margin-top:8px;font-size:12.5px;color:var(--ink2)}
+.evid b{color:var(--ink);font-weight:600}
+ul.tight{margin:6px 0;padding-left:18px}
+ul.tight li{margin:3px 0}
+/* 方案卡 */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.plan{border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;background:var(--card)}
+.plan:hover{border-color:var(--brand)}
+.plan.sel{border-color:var(--brand);border-width:2px;background:var(--brand-soft)}
+.plan .nm{font-weight:600;margin-bottom:2px}
+.plan .ds{font-size:12px;color:var(--ink2);min-height:32px}
+.plan .kv{font-family:var(--mono);font-size:12px;margin-top:8px;color:var(--ink2)}
+.plan .npv{font-family:var(--mono);font-size:15px;margin-top:4px;font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--brand-soft);
+  color:var(--brand);margin-right:5px}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)}
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--ink2);font-weight:600;font-size:12px}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{background:#fafbfc;border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.kpi .l{font-size:11.5px;color:var(--ink2)}
+.kpi .v{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:2px}
+.kpi .s{font-size:11px;color:var(--ink3)}
+.pos{color:var(--ok)} .neg{color:var(--bad)}
+/* 条形 */
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:3px}
+.bar>i{display:block;height:100%;background:var(--brand)}
+/* tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{border-radius:20px;padding:5px 13px;font-size:12.5px}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+pre.proposal{background:#fafbfc;border:1px solid var(--line);border-radius:9px;padding:14px;
+  font-family:var(--mono);font-size:12px;white-space:pre-wrap;max-height:460px;overflow:auto;margin:0}
+.note{font-size:12px;color:var(--ink3);margin-top:8px}
+.chain-log{font-size:12px;color:var(--ink2)}
+footer{padding:20px 24px 40px;color:var(--ink3);font-size:12px;border-top:1px solid var(--line)}
+.ev{font-size:11px;padding:1px 6px;border-radius:4px;background:#eef1f4;color:var(--ink2);margin-left:4px}
+.sens-row{display:grid;grid-template-columns:90px 1fr 100px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="tools">
+    <button id="btn-theme">主题</button>
+    <button id="btn-demo">演示模式</button>
+  </div>
+  <h1>解决方案顾问 Agent</h1>
+  <p>输入客户情况，自动完成「需求解析 → 方案设计 → 厂商选型 → 财务测算 → 风险对策」五步推理，输出可交付的方案建议书。</p>
+</header>
+
+<div class="layout">
+  <!-- ============ 输入 ============ -->
+  <aside>
+    <div class="card">
+      <h2>客户情况</h2>
+      <label>客户名称</label>
+      <input type="text" id="i-client" value="示例客户集团">
+
+      <label>建筑类型</label>
+      <select id="i-building"></select>
+
+      <label>所在区域</label>
+      <select id="i-region"></select>
+
+      <label>建筑面积（㎡）<span class="rowval" id="v-area"></span></label>
+      <input type="range" id="i-area" min="2000" max="300000" step="1000" value="50000">
+
+      <label>决策优先级</label>
+      <select id="i-goal"></select>
+
+      <label>投资上限（USD/㎡，0 = 不限）<span class="rowval" id="v-budget"></span></label>
+      <input type="range" id="i-budget" min="0" max="120" step="2" value="0">
+
+      <details class="adv">
+        <summary>资本结构与财务假设</summary>
+        <label>债务比例 <span class="rowval" id="v-debt"></span></label>
+        <input type="range" id="i-debt" min="0" max="90" step="5" value="50">
+        <label>债务成本（年化）<span class="rowval" id="v-rd"></span></label>
+        <input type="range" id="i-rd" min="1" max="12" step="0.5" value="6.5">
+        <label>Beta（项目风险系数）<span class="rowval" id="v-beta"></span></label>
+        <input type="range" id="i-beta" min="0.4" max="1.8" step="0.05" value="0.9">
+        <label>测算年限（年）</label>
+        <input type="number" id="i-horizon" min="5" max="30" step="1" value="15">
+        <label>政府补贴比例（%）<span class="rowval" id="v-sub"></span></label>
+        <input type="range" id="i-sub" min="0" max="40" step="1" value="0">
+        <label>电价年涨幅（%）</label>
+        <input type="number" id="i-esc" min="0" max="15" step="0.5" value="4">
+      </details>
+
+      <details class="adv">
+        <summary>AI 润色（可选，不配置也能用）</summary>
+        <label>接口地址</label>
+        <input type="text" id="i-api" placeholder="https://api.openai.com/v1">
+        <label>模型</label>
+        <input type="text" id="i-model" placeholder="gpt-4o-mini">
+        <label>API Key（仅存本机浏览器）</label>
+        <input type="text" id="i-key" placeholder="sk-...">
+        <p class="note">密钥只保存在你本机 localStorage，请求由浏览器直连服务商，不经任何中间服务器。留空则全程使用本地推理引擎，功能不受影响。</p>
+        <button id="btn-save-ai" style="margin-top:8px">保存</button>
+      </details>
+    </div>
+  </aside>
+
+  <!-- ============ 推理链 ============ -->
+  <section>
+    <div class="card" id="c-summary">
+      <h2>结论摘要</h2>
+      <div id="summary"></div>
+    </div>
+    <div id="chain"></div>
+
+    <div class="card">
+      <h2>反事实分析：预算不足时先砍谁</h2>
+      <div id="cf"></div>
+      <p class="note">按「每单位投资带来的 NPV」从低到高排序，越靠前越该优先削减。这是顾问在被压价时的核心论据。</p>
+    </div>
+
+    <div class="card">
+      <h2>干系人视角</h2>
+      <div class="tabs" id="sh-tabs"></div>
+      <div id="sh-body"></div>
+    </div>
+
+    <div class="card">
+      <h2>方案建议书</h2>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <button id="btn-copy">复制</button>
+        <button id="btn-dl">下载 Markdown</button>
+        <button id="btn-ai" class="primary">AI 润色执行摘要</button>
+      </div>
+      <pre class="proposal" id="proposal"></pre>
+      <p class="note" id="ai-status"></p>
+    </div>
+  </section>
+</div>
+
+<footer>
+  所有参数与算法可回溯、可复算。财务口径：WACC = E/V×Re + D/V×Rd×(1−T)，Re 由 CAPM 推导；主决策指标为 NPV，IRR 与 MIRR 为辅助；合成节能率采用 1−Π(1−xᵢ) 口径。
+  <br>数据为同类项目基准与模型假设，用于方案沟通，正式投资决策需以现场审计数据替换。
+</footer>
+
+<script src="agent-core.js"></script>
+<script>
+(function(){
+'use strict';
+var A = window.AgentCore;
+var $ = function(id){return document.getElementById(id);};
+var esc = function(s){return String(s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+var money = A.fmtMoney;
+var pct = function(v){return isFinite(v)?(v*100).toFixed(1)+'%':'—';};
+var curSH = 'cfo';
+
+// ---------- 初始化下拉 ----------
+function fillSelects(){
+  var b=[];Object.keys(A.BUILDING).forEach(function(k){
+    b.push('<option value="'+k+'">'+A.BUILDING[k].name+'</option>');});
+  $('i-building').innerHTML=b.join('');$('i-building').value='office';
+  var r=[];Object.keys(A.REGION).forEach(function(k){
+    r.push('<option value="'+k+'">'+A.REGION[k].name+'</option>');});
+  $('i-region').innerHTML=r.join('');$('i-region').value='mena';
+  var g=[];Object.keys(A.PRIORITY_NAME).forEach(function(k){
+    g.push('<option value="'+k+'">'+A.PRIORITY_NAME[k]+'</option>');});
+  $('i-goal').innerHTML=g.join('');$('i-goal').value='cost';
+}
+
+function readInput(){
+  return {
+    clientName: $('i-client').value || '客户',
+    buildingType: $('i-building').value,
+    region: $('i-region').value,
+    goal: $('i-goal').value,
+    area: +$('i-area').value,
+    budgetCap: +$('i-budget').value,
+    debtPct: +$('i-debt').value/100,
+    rd: +$('i-rd').value/100,
+    beta: +$('i-beta').value,
+    horizon: +$('i-horizon').value,
+    subsidy: +$('i-sub').value/100,
+    esc: +$('i-esc').value/100,
+    planKey: window.__planKey || 'balanced'
+  };
+}
+
+function syncLabels(){
+  $('v-area').textContent=(+$('i-area').value).toLocaleString();
+  var b=+$('i-budget').value;
+  $('v-budget').textContent=(b===0?'不限':b+' USD/㎡');
+  $('v-debt').textContent=$('i-debt').value+'%';
+  $('v-rd').textContent=$('i-rd').value+'%';
+  $('v-beta').textContent=$('i-beta').value;
+  $('v-sub').textContent=$('i-sub').value+'%';
+}
+
+// ---------- 渲染 ----------
+function render(){
+  syncLabels();
+  var R = A.run(readInput());
+  window.__R = R;
+
+  renderSummary(R);
+  renderChain(R);
+  renderCF(R);
+  renderStakeholders(R);
+  $('proposal').textContent = R.proposal;
+}
+
+function renderSummary(R){
+  var f=R.fin, best=R.plans.slice().sort(function(a,b){return b.fin.npv-a.fin.npv;})[0];
+  var verdict = f.npv>0 ? '<span class="tag ok">财务可行</span>' : '<span class="tag bad">当前参数下不可行</span>';
+  var shape = (best.key!=='aggressive' && R.plans[2].fin.npv < best.fin.npv)
+    ? '<span class="tag warn">投资强度存在最优区间</span>' : '';
+  $('summary').innerHTML =
+    '<div style="font-size:15px;margin-bottom:8px">'+
+      esc($('i-client').value||'客户')+' · '+R.need.building.name+' · '+
+      (+$('i-area').value).toLocaleString()+' ㎡ · '+R.need.region.name+' '+verdict+' '+shape+
+    '</div>'+
+    '<div class="kpis">'+
+      kpi('推荐方案', R.chosen.name, R.chosen.modules.length+' 个模块 / '+R.chosen.capexPerM2+' USD/㎡')+
+      kpi('初始投资', money(f.capex), '债务 '+money(f.debt)+' · 权益 '+money(f.equity))+
+      kpi('净现值 NPV', money(f.npv), 'WACC '+pct(f.wacc), f.npv>=0?'pos':'neg')+
+      kpi('内部收益率 IRR', pct(f.irr), 'MIRR '+pct(f.mirr))+
+      kpi('回收期', f.sp===null?'期内未回本':f.sp.toFixed(1)+' 年', '折现 '+(f.dp===null?'—':f.dp+' 年'))+
+      kpi('年碳减排', f.co2yr.toFixed(0)+' 吨', '碳资产约 '+money(f.carbonVal)+'/年')+
+    '</div>'+
+    '<div class="evid" style="margin-top:12px"><b>最优投资强度提示：</b>三套方案中 <b>'+best.name+
+    '</b> 的净现值最高（'+money(best.fin.npv)+'）。'+
+    (best.key!=='aggressive'?'说明并非投资越大越好，超出最优区间后边际收益无法覆盖资本成本。':'该场景下加大投资仍具备边际价值。')+'</div>';
+}
+
+function kpi(l,v,s,cls){
+  return '<div class="kpi"><div class="l">'+l+'</div><div class="v '+(cls||'')+'">'+v+'</div><div class="s">'+s+'</div></div>';
+}
+
+function renderChain(R){
+  var H=[];
+
+  // Step 1
+  H.push(step(1,'需求解析与客户画像',
+    '<div><b>建筑类型：</b>'+R.need.building.name+'（基准能耗强度 '+R.need.building.eui+' kWh/㎡·年）</div>'+
+    '<div><b>核心痛点：</b>'+R.need.pains.map(function(p){return '<span class="tag">'+esc(p)+'</span>';}).join('')+'</div>'+
+    '<div><b>决策优先级：</b>'+R.need.goalName+'</div>'+
+    '<div class="evid"><b>推理依据</b><ul class="tight">'+
+      R.need.rationale.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+
+    '</ul></div>'));
+
+  // Step 2
+  var plans = R.plans.map(function(p){
+    var best = p.key===R.plans.slice().sort(function(a,b){return b.fin.npv-a.fin.npv;})[0].key;
+    return '<div class="plan'+(p.key===R.chosen.key?' sel':'')+'" data-plan="'+p.key+'">'+
+      '<div class="nm">'+p.name+(best?' <span class="tag ok">最优</span>':'')+'</div>'+
+      '<div class="ds">'+p.desc+'</div>'+
+      '<div class="kv">投资 '+p.capexPerM2+' USD/㎡ · 节能 '+(p.esav*100).toFixed(1)+'%</div>'+
+      '<div class="npv '+(p.fin.npv>=0?'pos':'neg')+'">NPV '+money(p.fin.npv)+'</div>'+
+      '<div class="kv">IRR '+pct(p.fin.irr)+' · 回收 '+(p.fin.sp===null?'—':p.fin.sp.toFixed(1)+' 年')+'</div>'+
+      (p.trimmed?'<div class="tag warn" style="margin-top:6px">已按预算上限裁剪</div>':'')+
+    '</div>';
+  }).join('');
+  H.push(step(2,'方案设计与配置生成',
+    '<div class="plans">'+plans+'</div>'+
+    '<h3>选中方案模块构成</h3>'+
+    '<table><thead><tr><th>模块</th><th class="n">投资 USD/㎡</th><th class="n">节能贡献</th><th>纳入理由</th></tr></thead><tbody>'+
+      R.chosen.modules.map(function(m){
+        return '<tr><td>'+m.name+'</td><td class="n">'+m.capex+'</td><td class="n">'+(m.esav*100).toFixed(0)+'%</td><td style="font-size:12px;color:var(--ink2)">'+m.why+'</td></tr>';
+      }).join('')+
+    '</tbody></table>'+
+    '<div class="evid"><b>关键口径</b>：多模块合成节能率用 1−Π(1−xᵢ) 而非简单相加，避免叠加后高估。'+
+    '本方案合成节能率 <b>'+(R.chosen.esav*100).toFixed(1)+'%</b>，运维节省 <b>'+(R.chosen.osav*100).toFixed(1)+'%</b>。<span class="ev">模型口径</span></div>'));
+
+  // Step 3
+  var w=A.WEIGHTS[readInput().goal]||A.WEIGHTS.cost;
+  H.push(step(3,'厂商选型与差距归因',
+    '<table><thead><tr><th>厂商</th>'+A.DIMS.map(function(d){return '<th class="n">'+d.name+'</th>';}).join('')+
+    '<th class="n">亲和</th><th class="n">综合</th></tr></thead><tbody>'+
+    R.vendors.map(function(v,i){
+      return '<tr'+(i===0?' style="background:var(--brand-soft)"':'')+'><td><b>'+v.name+'</b></td>'+
+        A.DIMS.map(function(d){return '<td class="n">'+v.parts[d.k].toFixed(2)+'</td>';}).join('')+
+        '<td class="n">+'+(v.aff||0).toFixed(2)+'</td><td class="n"><b>'+v.total.toFixed(2)+'</b></td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div class="evid"><b>推荐：</b>'+R.vendors[0].name+' — '+R.vendors[0].why+'<br>'+
+    '<b>权重向量（'+R.need.goalName+'）：</b>'+A.DIMS.map(function(d){
+      return d.name+' '+((w[d.k]||0)*100).toFixed(0)+'%';}).join(' · ')+'（合计 100%）<br>'+
+    '<b>差距归因：</b>'+R.gapText+'</div>'));
+
+  // Step 4
+  var f=R.fin;
+  H.push(step(4,'投资回报测算（DCF）',
+    '<div class="evid" style="margin-bottom:10px"><b>资本成本拆解</b>：Re = Rf + β×ERP = '+
+      (f.Re*100).toFixed(2)+'%；税后债务成本 = '+(f.RdAT*100).toFixed(2)+'%；'+
+      '<b>WACC = '+(f.wacc*100).toFixed(2)+'%</b></div>'+
+    '<div class="kpis">'+
+      kpi('净现值 NPV', money(f.npv), '主决策指标', f.npv>=0?'pos':'neg')+
+      kpi('IRR', pct(f.irr), '辅助指标')+
+      kpi('MIRR', pct(f.mirr), '再投于 WACC，更保守')+
+      kpi('盈利指数 PI', isFinite(f.pi)?f.pi.toFixed(2):'—', '>1 可行')+
+      kpi('ROIC−WACC 利差', (f.spread*100).toFixed(2)+'%', '正数为创造价值', f.spread>=0?'pos':'neg')+
+      kpi('折现回收期', f.dp===null?'期内未回本':f.dp+' 年', '考虑货币时间价值')+
+    '</div>'+
+    '<h3>敏感性分析（各变量 ±20% 对 NPV 的影响）</h3>'+
+    R.sensitivity.map(function(s){
+      var lo=Math.min(s.low,s.high),hi=Math.max(s.low,s.high),span=Math.max(Math.abs(hi),Math.abs(lo))||1;
+      return '<div class="sens-row"><span>'+s.label+'</span>'+
+        '<span class="bar"><i style="width:'+Math.round(Math.abs(s.swing)/span*100)+'%"></i></span>'+
+        '<span style="text-align:right;font-family:var(--mono)">'+money(s.low)+' ~ '+money(s.high)+'</span></div>';
+    }).join('')+
+    (f.tvOn?'<div class="note">含 Gordon 终值口径 NPV：'+money(f.npvTv)+'（永续增长率 '+pct(f.g0)+'）</div>':
+      '<div class="note">当前 WACC 未显著高于永续增长率，已抑制终值计算以免产生误导性结果。</div>')+
+    '<details class="adv"><summary>展开逐年现金流表</summary>'+
+    '<table><thead><tr><th class="n">年</th><th class="n">节能与运维收益</th><th class="n">维护</th><th class="n">折旧</th><th class="n">EBIT</th><th class="n">税</th><th class="n">经营现金流</th><th class="n">累计折现</th></tr></thead><tbody>'+
+    f.rows.map(function(r){return '<tr><td class="n">'+r.t+'</td><td class="n">'+money(r.sav)+'</td><td class="n">'+money(r.maint)+
+      '</td><td class="n">'+money(r.dep)+'</td><td class="n">'+money(r.ebit)+'</td><td class="n">'+money(r.tax)+
+      '</td><td class="n">'+money(r.ocf)+'</td><td class="n">'+money(r.cumD)+'</td></tr>';}).join('')+
+    '</tbody></table></details>'));
+
+  // Step 5
+  H.push(step(5,'风险识别与对策',
+    '<table><thead><tr><th>等级</th><th>风险</th><th>说明</th><th>对策</th></tr></thead><tbody>'+
+    R.risks.map(function(r){
+      var cls=r.lv==='高'?'bad':(r.lv==='中'?'warn':'ok');
+      return '<tr><td><span class="tag '+cls+'">'+r.lv+'</span></td><td><b>'+r.name+'</b></td>'+
+        '<td style="font-size:12.5px;color:var(--ink2)">'+r.why+'</td>'+
+        '<td style="font-size:12.5px">'+r.fix+'</td></tr>';
+    }).join('')+'</tbody></table>'));
+
+  $('chain').innerHTML = H.join('');
+
+  Array.prototype.forEach.call(document.querySelectorAll('.plan'), function(el){
+    el.addEventListener('click', function(){
+      window.__planKey = el.getAttribute('data-plan');
+      render();
+    });
+  });
+}
+
+function step(no,title,body){
+  return '<div class="step active"><div class="step-no">'+no+'</div><h2>'+title+'</h2>'+body+'</div>';
+}
+
+function renderCF(R){
+  var items=R.counterfactual.items;
+  if(!items.length){$('cf').innerHTML='<p class="note">模块数量不足以做削减分析。</p>';return;}
+  var maxEff=Math.max.apply(null,items.map(function(i){return Math.abs(i.efficiency);}))||1;
+  $('cf').innerHTML='<table><thead><tr><th>优先削减顺序</th><th>模块</th><th class="n">可省投资</th>'+
+    '<th class="n">NPV 损失</th><th>性价比</th></tr></thead><tbody>'+
+    items.map(function(i,n){
+      var w=Math.round(Math.abs(i.efficiency)/maxEff*100);
+      return '<tr><td>'+(n+1)+'</td><td><b>'+i.name+'</b></td><td class="n">'+i.capexSaved+' USD/㎡</td>'+
+        '<td class="n">'+(i.npvLoss>=0?'-':'+')+money(Math.abs(i.npvLoss))+'</td>'+
+        '<td><span class="bar" style="display:inline-block;width:90px;vertical-align:middle"><i style="width:'+w+'%"></i></span></td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div class="evid" style="margin-top:10px"><b>顾问话术：</b>若客户压价，优先削减 <b>'+items[0].name+
+    '</b>（可省 '+items[0].capexSaved+' USD/㎡，NPV 仅损失 '+money(Math.abs(items[0].npvLoss))+
+    '）；而 <b>'+items[items.length-1].name+'</b> 应保留到最后，它的单位投资性价比最高。</div>';
+}
+
+function renderStakeholders(R){
+  $('sh-tabs').innerHTML=R.stakeholders.map(function(s){
+    return '<button data-k="'+s.k+'" class="'+(s.k===curSH?'on':'')+'">'+s.name+'</button>';}).join('');
+  var s=R.stakeholders.filter(function(x){return x.k===curSH;})[0];
+  $('sh-body').innerHTML=
+    '<div class="evid"><b>关注点：</b>'+s.focus+'</div>'+
+    '<h3>他们会问</h3><ul class="tight">'+
+      s.asks.map(function(q){return '<li>'+esc(q)+'</li>';}).join('')+'</ul>'+
+    '<h3>怎么回应</h3><div>'+s.answer+'</div>';
+  Array.prototype.forEach.call($('sh-tabs').querySelectorAll('button'),function(b){
+    b.addEventListener('click',function(){curSH=b.getAttribute('data-k');renderStakeholders(R);});});
+}
+
+// ---------- AI 润色 ----------
+function aiConfig(){
+  try{
+    return {api:localStorage.getItem('sa_api')||'',model:localStorage.getItem('sa_model')||'',key:localStorage.getItem('sa_key')||''};
+  }catch(e){return {api:'',model:'',key:''};}
+}
+function localExecutiveSummary(R){
+  var f=R.fin;
+  return '【本地引擎生成】针对 '+($('i-client').value||'客户')+' 的 '+R.need.building.name+
+    '（'+(+$('i-area').value).toLocaleString()+' ㎡，'+R.need.region.name+'），建议采用'+R.chosen.name+
+    '，覆盖 '+R.chosen.modules.length+' 个模块，单位投资 '+R.chosen.capexPerM2+' USD/㎡，'+
+    '合成节能率 '+(R.chosen.esav*100).toFixed(1)+'%。在 WACC '+(f.wacc*100).toFixed(2)+'% 口径下，'+
+    '项目净现值 '+money(f.npv)+'，内部收益率 '+pct(f.irr)+'，'+
+    (f.sp===null?'测算期内尚未回本':'约 '+f.sp.toFixed(1)+' 年收回投资')+
+    '，年碳减排 '+f.co2yr.toFixed(0)+' 吨。核心风险为节能效果不达预期，'+
+    '建议以保证节能额条款与第三方核证对冲。';
+}
+function aiPolish(){
+  var R=window.__R, cfg=aiConfig(), st=$('ai-status');
+  if(!cfg.api||!cfg.key){
+    st.textContent='未配置 AI 接口，已使用本地推理引擎生成执行摘要（功能完整，无需联网）。';
+    $('proposal').textContent='> '+localExecutiveSummary(R)+'\n\n'+R.proposal;
+    return;
+  }
+  st.textContent='正在调用模型润色…';
+  var prompt='你是资深解决方案顾问。基于以下结构化测算结果，用顾问口吻写一段 200 字以内的执行摘要，'+
+    '要求：结论先行、面向企业决策者、不要复述全部数字、点出最关键的一个风险。\n\n'+
+    '客户：'+($('i-client').value||'客户')+'\n建筑：'+R.need.building.name+'\n区域：'+R.need.region.name+
+    '\n面积：'+R.params.area+' ㎡\n推荐方案：'+R.chosen.name+'\n单位投资：'+R.chosen.capexPerM2+' USD/㎡'+
+    '\n合成节能率：'+(R.chosen.esav*100).toFixed(1)+'%\nCAPEX：'+money(R.fin.capex)+
+    '\nWACC：'+(R.fin.wacc*100).toFixed(2)+'%\nNPV：'+money(R.fin.npv)+'\nIRR：'+pct(R.fin.irr)+
+    '\n回收期：'+(R.fin.sp===null?'期内未回本':R.fin.sp.toFixed(1)+' 年')+
+    '\n推荐厂商：'+R.vendors[0].name+'\n首要风险：'+R.risks[0].name;
+
+  fetch(cfg.api.replace(/\/$/,'')+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+    body:JSON.stringify({model:cfg.model||'gpt-4o-mini',messages:[{role:'user',content:prompt}],temperature:0.4})
+  }).then(function(r){return r.json();})
+  .then(function(j){
+    var txt=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+    if(!txt)throw new Error('返回为空');
+    $('proposal').textContent='> '+txt.trim()+'\n\n'+R.proposal;
+    st.textContent='已由模型润色执行摘要（浏览器直连，密钥仅存本机）。';
+  }).catch(function(e){
+    st.textContent='调用失败（'+(e.message||'网络或密钥问题')+'），已回退本地引擎，功能不受影响。';
+    $('proposal').textContent='> '+localExecutiveSummary(R)+'\n\n'+R.proposal;
+  });
+}
+
+// ---------- 事件 ----------
+function bind(){
+  var ids=['i-client','i-building','i-region','i-area','i-goal','i-budget','i-debt','i-rd',
+           'i-beta','i-horizon','i-sub','i-esc'];
+  ids.forEach(function(id){
+    $(id).addEventListener('input',render);
+    $(id).addEventListener('change',render);
+  });
+  $('btn-copy').addEventListener('click',function(){
+    var t=$('proposal').textContent;
+    if(navigator.clipboard)navigator.clipboard.writeText(t);
+    $('ai-status').textContent='已复制到剪贴板。';
+  });
+  $('btn-dl').addEventListener('click',function(){
+    var name=(($('i-client').value||'客户')+'智慧建筑方案建议.md');
+    var blob=new Blob([$('proposal').textContent],{type:'text/markdown;charset=utf-8'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  });
+  $('btn-ai').addEventListener('click',aiPolish);
+  $('btn-save-ai').addEventListener('click',function(){
+    try{
+      localStorage.setItem('sa_api',$('i-api').value.trim());
+      localStorage.setItem('sa_model',$('i-model').value.trim());
+      localStorage.setItem('sa_key',$('i-key').value.trim());
+      $('ai-status').textContent='已保存到本机浏览器。';
+    }catch(e){$('ai-status').textContent='保存失败：浏览器禁用了本地存储。';}
+  });
+  $('btn-theme').addEventListener('click',function(){
+    document.body.classList.toggle('dark');
+    if(document.body.classList.contains('dark')){
+      document.documentElement.style.setProperty('--bg','#16181c');
+      document.documentElement.style.setProperty('--card','#1e2126');
+      document.documentElement.style.setProperty('--ink','#e8eaed');
+      document.documentElement.style.setProperty('--ink2','#a8b0b8');
+      document.documentElement.style.setProperty('--line','#2f343a');
+      document.documentElement.style.setProperty('--brand-soft','#12304d');
+    }else{
+      location.reload();
+    }
+  });
+  $('btn-demo').addEventListener('click',function(){
+    var seq=[['office','mena'],['hospital','mena'],['data','eu'],['campus','china']];
+    var i=0;
+    var t=setInterval(function(){
+      if(i>=seq.length){clearInterval(t);return;}
+      $('i-building').value=seq[i][0];$('i-region').value=seq[i][1];
+      $('i-client').value=['利雅得商业地产','沙特东部医疗城','法兰克福数据中心','深圳科技园区'][i];
+      render();i++;
+    },1600);
+  });
+  var cfg=aiConfig();
+  $('i-api').value=cfg.api;$('i-model').value=cfg.model;$('i-key').value=cfg.key;
+}
+
+fillSelects();bind();render();
+})();
+</script>
+</body>
+</html>
